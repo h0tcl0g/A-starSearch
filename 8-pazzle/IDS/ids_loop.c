@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define N 3
-#define MAX_DEPTH 50
+#define MAX_DEPTH 16
+#define EXEC_TIMES 100
 
 typedef struct State
 {
@@ -30,7 +32,7 @@ void disp_array(int *array)
     printf("\n");
 }
 
-// min_valからmax_val-1の範囲で整数の乱数を返す関数*
+// min_valからmax_valの範囲で整数の乱数を返す関数*
 int get_rand(int min_val, int max_val)
 {
     srand((unsigned int)time(NULL));
@@ -42,7 +44,7 @@ void shuffle(int *array, int size)
 {
     for (int i = 0; i < size; i++)
     {
-        int r = get_rand(i, size);
+        int r = get_rand(i, size - 1);
         int tmp = array[i];
         array[i] = array[r];
         array[r] = tmp;
@@ -148,7 +150,7 @@ int depth_limited_search(State *state, int depth)
 }
 
 // 反復深化探索
-void iterative_deepening_search(State *initial_state)
+int iterative_deepening_search(State *initial_state)
 {
     for (int depth = 0; depth <= MAX_DEPTH; ++depth)
     {
@@ -157,10 +159,11 @@ void iterative_deepening_search(State *initial_state)
         if (depth_limited_search(initial_state, depth))
         {
             printf("Solution found at depth %d\n", depth);
-            return;
+            return 0;
         }
     }
     printf("No solution found up to depth %d\n", MAX_DEPTH);
+    return -1;
 }
 
 // 初期状態を設定する関数
@@ -223,24 +226,44 @@ void shuffle_goal(int *goal_board)
 int main()
 {
     clock_t start_clock, end_clock;
+    double time;
+    FILE *fp;
+    int isSearched;
 
-    int initial_board[N][N] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
-    State initial_state;
+    fp = fopen("exec_time.csv", "w");
+    fprintf(fp, "exec_times,time\n");
 
-    shuffle_initial_board(initial_board);
-    shuffle_goal(goal);
+    for (int i = 0; i < EXEC_TIMES; i++)
+    {
+        int initial_board[N][N] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
+        State initial_state;
 
-    start_clock = clock();
+        shuffle_initial_board(initial_board);
+        shuffle_goal(goal);
 
-    initialize_state(&initial_state, initial_board);
+        printf("----- %d -----\n", i);
 
-    iterative_deepening_search(&initial_state);
+        start_clock = clock();
 
-    // print_solution(&initial_state);
+        initialize_state(&initial_state, initial_board);
 
-    end_clock = clock();
+        isSearched = iterative_deepening_search(&initial_state);
 
-    printf("time = %lf\n", (double)(end_clock - start_clock) / CLOCKS_PER_SEC);
+        end_clock = clock();
 
+        time = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
+        printf("time = %lf\n", time);
+
+        if (isSearched == 0)
+        {
+            fprintf(fp, "%d,%lf\n", i, time);
+        }
+        else
+        {
+            fprintf(fp, "%d,failed\n", i);
+        }
+        sleep(1); // 乱数のシードにtime()を用いているためある程度待たないとランダムな条件にならない
+    }
+    fclose(fp);
     return 0;
 }
