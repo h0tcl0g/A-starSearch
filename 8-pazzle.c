@@ -12,12 +12,12 @@
 
 #include <stdio.h>
 typedef struct node *link;
-typedef int *state;
+// typedef int *state;
 static link head;
 
 struct node
 {
-    state A;
+    int A[3][3];
     int h;
 
     link s;
@@ -25,7 +25,7 @@ struct node
     link u;
 };
 
-link NEW(state A, int h, int dh)
+link NEW(int h, int dh)
 {
     link x = malloc(sizeof *x);
     x->A = A;

@@ -10,7 +10,7 @@ typedef struct
 {
     int board[N][N];
     int g; // cost from start to current state
-    int h; // heuristic cost to goal
+    int h; // heuristic cost to goal (always 0)
     int f; // g + h
     struct State *parent;
 } State;
@@ -28,28 +28,11 @@ void swap(int *a, int *b)
     *b = temp;
 }
 
-int heuristic(State *state)
-{
-    int misplaced = 0;
-    int goal[N][N] = {{1, 2, 3}, {8, 0, 4}, {7, 6, 5}};
-    for (int i = 0; i < N; ++i)
-    {
-        for (int j = 0; j < N; ++j)
-        {
-            if (state->board[i][j] != 0 && state->board[i][j] != goal[i][j])
-            {
-                misplaced++;
-            }
-        }
-    }
-    return misplaced;
-}
-
 void initialize_state(State *state, int board[N][N], int g, State *parent)
 {
     memcpy(state->board, board, sizeof(state->board));
     state->g = g;
-    state->h = heuristic(state);
+    state->h = 0; // heuristic is always 0
     state->f = state->g + state->h;
     state->parent = parent;
 }
@@ -149,7 +132,7 @@ void get_neighbors(State *state, State neighbors[], int *num_neighbors)
             memcpy(&neighbor, state, sizeof(State));
             swap(&neighbor.board[row][col], &neighbor.board[newRow][newCol]);
             neighbor.g = state->g + 1;
-            neighbor.h = heuristic(&neighbor);
+            neighbor.h = 0; // heuristic is always 0
             neighbor.f = neighbor.g + neighbor.h;
             neighbor.parent = state;
             neighbors[(*num_neighbors)++] = neighbor;
