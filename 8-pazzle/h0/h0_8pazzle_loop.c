@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define N 3
 #define MAX_STATES 1000000
+#define EXEC_TIMES 100
 
 typedef struct
 {
@@ -20,6 +22,65 @@ typedef struct
     State *states[MAX_STATES];
     int size;
 } PriorityQueue;
+
+int goal[N][N] = {{1, 2, 3}, {8, 0, 4}, {7, 6, 5}};
+
+// １辺Nの正方行列を表示*
+void disp_array(int *array)
+{
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            printf("%d ", array[i * N + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+// min_valからmax_valの範囲で整数の乱数を返す関数*
+int get_rand(int min_val, int max_val)
+{
+    srand((unsigned int)time(NULL));
+    return (int)((rand() % (max_val + 1 - min_val)) + min_val);
+}
+
+// 要素数sizeの配列arrayの要素をシャッフルする関数*
+void shuffle(int *array, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        int r = get_rand(i, size - 1);
+        int tmp = array[i];
+        array[i] = array[r];
+        array[r] = tmp;
+    }
+}
+
+// 2次元配列の要素をシャッフルする関数*
+void shuffle_state(int *array_2d, int size)
+{
+    int size_1d = size * size;
+    int array_1d[size_1d];
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            array_1d[i * size + j] = array_2d[i * size + j];
+        }
+    }
+
+    shuffle(array_1d, size_1d);
+
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            array_2d[i * size + j] = array_1d[i * size + j];
+        }
+    }
+}
 
 void swap(int *a, int *b)
 {
@@ -59,7 +120,6 @@ State *pop(PriorityQueue *pq)
 
 int is_goal(State *state)
 {
-    int goal[N][N] = {{1, 2, 3}, {8, 0, 4}, {7, 6, 5}};
     for (int i = 0; i < N; ++i)
     {
         for (int j = 0; j < N; ++j)
@@ -140,57 +200,94 @@ void get_neighbors(State *state, State neighbors[], int *num_neighbors)
     }
 }
 
+// 初期状態のシャッフル*
+void shuffle_initial_board(int *initial_board)
+{
+    printf("initial board:\n");
+    disp_array(initial_board);
+    shuffle_state(initial_board, N);
+    printf("Shuffled initial state:\n");
+    disp_array(initial_board);
+}
+
+// ゴールのシャッフル*
+void shuffle_goal(int *goal_board)
+{
+    printf("initial goal board:\n");
+    disp_array(goal_board);
+    shuffle_state(goal_board, N);
+    printf("Shuffled goal state:\n");
+    disp_array(goal_board);
+}
+
 int main()
 {
     clock_t start_clock, end_clock;
+    double time;
+    FILE *fp;
 
-    int initial_board[N][N] = {{2, 8, 3}, {1, 6, 4}, {7, 0, 5}};
-    PriorityQueue openList;
-    openList.size = 0;
+    fp = fopen("exec_time.csv", "w");
+    fprintf(fp, "exec_times,time\n");
 
-    start_clock = clock();
-
-    State *initial_state = (State *)malloc(sizeof(State));
-    initialize_state(initial_state, initial_board, 0, NULL);
-    push(&openList, initial_state);
-
-    while (openList.size > 0)
+    for (int exe = 0; exe < EXEC_TIMES; exe++)
     {
-        State *current = pop(&openList);
+        int initial_board[N][N] = {{2, 8, 3}, {1, 6, 4}, {7, 0, 5}};
+        PriorityQueue openList;
+        openList.size = 0;
 
-        if (is_goal(current))
+        shuffle_initial_board(initial_board);
+        shuffle_goal(goal);
+
+        printf("----- %d -----\n", exe);
+
+        start_clock = clock();
+
+        State *initial_state = (State *)malloc(sizeof(State));
+        initialize_state(initial_state, initial_board, 0, NULL);
+        push(&openList, initial_state);
+
+        while (openList.size > 0)
         {
-            print_solution(current);
-            break;
-        }
+            State *current = pop(&openList);
 
-        State neighbors[4];
-        int num_neighbors;
-        get_neighbors(current, neighbors, &num_neighbors);
-
-        for (int i = 0; i < num_neighbors; ++i)
-        {
-            int found_in_open = 0;
-            for (int j = 0; j < openList.size; ++j)
+            if (is_goal(current))
             {
-                if (is_same_state(openList.states[j], &neighbors[i]) && openList.states[j]->g <= neighbors[i].g)
+                print_solution(current);
+                break;
+            }
+
+            State neighbors[4];
+            int num_neighbors;
+            get_neighbors(current, neighbors, &num_neighbors);
+
+            for (int i = 0; i < num_neighbors; ++i)
+            {
+                int found_in_open = 0;
+                for (int j = 0; j < openList.size; ++j)
                 {
-                    found_in_open = 1;
-                    break;
+                    if (is_same_state(openList.states[j], &neighbors[i]) && openList.states[j]->g <= neighbors[i].g)
+                    {
+                        found_in_open = 1;
+                        break;
+                    }
+                }
+                if (!found_in_open)
+                {
+                    State *new_state = (State *)malloc(sizeof(State));
+                    memcpy(new_state, &neighbors[i], sizeof(State));
+                    push(&openList, new_state);
                 }
             }
-            if (!found_in_open)
-            {
-                State *new_state = (State *)malloc(sizeof(State));
-                memcpy(new_state, &neighbors[i], sizeof(State));
-                push(&openList, new_state);
-            }
         }
+
+        end_clock = clock();
+
+        time = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
+        printf("time = %lf\n", time);
+        fprintf(fp, "%d,%lf\n", exe, time);
+        sleep(1);
     }
 
-    end_clock = clock();
-
-    printf("time = %lf\n", (double)(end_clock - start_clock) / CLOCKS_PER_SEC);
-
+    fclose(fp);
     return 0;
 }
