@@ -238,7 +238,7 @@ int main()
         int flag = 0;
 
         shuffle_initial_board(initial_board);
-        shuffle_goal(goal);
+        // shuffle_goal(goal);
 
         printf("----- %d -----\n", exe);
 

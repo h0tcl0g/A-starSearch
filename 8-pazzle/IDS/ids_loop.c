@@ -239,7 +239,7 @@ int main()
         State initial_state;
 
         shuffle_initial_board(initial_board);
-        shuffle_goal(goal);
+        // shuffle_goal(goal);
 
         printf("----- %d -----\n", i);
 
