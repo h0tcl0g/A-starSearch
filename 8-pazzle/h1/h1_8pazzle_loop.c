@@ -12,7 +12,7 @@ typedef struct
 {
     int board[N][N];
     int g; // cost from start to current state
-    int h; // heuristic cost to goal (always 0)
+    int h; // heuristic cost to goal
     int f; // g + h
     struct State *parent;
 } State;
@@ -89,11 +89,28 @@ void swap(int *a, int *b)
     *b = temp;
 }
 
+int heuristic(State *state)
+{
+    int misplaced = 0;
+
+    for (int i = 0; i < N; ++i)
+    {
+        for (int j = 0; j < N; ++j)
+        {
+            if (state->board[i][j] != 0 && state->board[i][j] != goal[i][j])
+            {
+                misplaced++;
+            }
+        }
+    }
+    return misplaced;
+}
+
 void initialize_state(State *state, int board[N][N], int g, State *parent)
 {
     memcpy(state->board, board, sizeof(state->board));
     state->g = g;
-    state->h = 0; // heuristic is always 0
+    state->h = heuristic(state);
     state->f = state->g + state->h;
     state->parent = parent;
 }
@@ -120,6 +137,7 @@ State *pop(PriorityQueue *pq)
 
 int is_goal(State *state)
 {
+
     for (int i = 0; i < N; ++i)
     {
         for (int j = 0; j < N; ++j)
@@ -192,7 +210,7 @@ void get_neighbors(State *state, State neighbors[], int *num_neighbors)
             memcpy(&neighbor, state, sizeof(State));
             swap(&neighbor.board[row][col], &neighbor.board[newRow][newCol]);
             neighbor.g = state->g + 1;
-            neighbor.h = 0; // heuristic is always 0
+            neighbor.h = heuristic(&neighbor);
             neighbor.f = neighbor.g + neighbor.h;
             neighbor.parent = state;
             neighbors[(*num_neighbors)++] = neighbor;
@@ -250,17 +268,12 @@ int main()
 
         while (openList.size > 0)
         {
+            // printf("%d ", openList.size);
             State *current = pop(&openList);
 
             if (openList.size > MAX_STATES - 1000)
             {
                 flag = 1;
-                fprintf(fp, "%d,failed\n", exe);
-                break;
-            }
-
-            if (openList.size > MAX_STATES - 1000)
-            {
                 fprintf(fp, "%d,failed\n", exe);
                 break;
             }
@@ -296,7 +309,6 @@ int main()
         }
 
         end_clock = clock();
-
         time = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
         if (flag == 1)
         {
